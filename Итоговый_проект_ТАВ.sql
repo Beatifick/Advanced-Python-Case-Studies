@@ -1,14 +1,14 @@
---1. Получите количество проектов, подписанных в 2023 году.
---В результат вывести одно значение количества.
+-- 1. Get the number of projects signed in 2023.
+-- Return a single value representing the total count.
 
 SELECT count(*)
 FROM stroy.project
 WHERE sign_date >= DATE '2023-01-01'
   AND sign_date < DATE '2024-01-01';
 
---2. Получите общий возраст сотрудников, нанятых в 2022 году.
---Результат вывести одним значением в виде "... years ... months ... days"
---Использование более 2х функций для работы с типом данных дата и время будет являться ошибкой.
+-- 2. Calculate the total age of employees hired in 2022.
+-- Return a single value in the format "... years ... months ... days".
+-- Using more than two date/time functions will be considered an error.
 
 SELECT justify_interval(
            sum(age(current_date, p.birthdate))
@@ -19,9 +19,10 @@ JOIN stroy.person p
 WHERE e.hire_date >= DATE '2022-01-01'
   AND e.hire_date < DATE '2023-01-01';
 
---3. Получите сотрудников, у которого фамилия начинается на М, всего в фамилии 8 букв и который работает дольше других.
---Если таких сотрудников несколько, выведите одного случайного.
---В результат выведите два столбца, в первом должны быть имя и фамилия через пробел, во втором дата найма.
+-- 3. Find an employee whose last name starts with "M", contains exactly 8 letters,
+-- and who has been working at the company the longest.
+-- If multiple employees match the criteria, return one random employee.
+-- Return two columns: full name and hire date.
 
 SELECT
     p.first_name || ' ' || p.last_name AS employee_name,
@@ -40,8 +41,9 @@ WHERE p.last_name LIKE 'М_______'
 ORDER BY random()
 LIMIT 1;
 
---4. Получите среднее значение полных лет сотрудников, которые уволены и не задействованы на проектах.
---В результат вывести одно среднее значение. Если получаете null, то в результат нужно вывести 0.
+-- 4. Calculate the average age in full years of employees who have been dismissed
+-- and are not assigned to any projects.
+-- Return a single average value. If the result is NULL, return 0.
 
 SELECT COALESCE(
            AVG(EXTRACT(YEAR FROM age(current_date, p.birthdate))),
@@ -58,8 +60,9 @@ WHERE e.dismissal_date IS NOT NULL
            OR e.employee_id = ANY(pr.employees_id)
     );
 
---5.Чему равна сумма полученных платежей от контрагентов из Жуковский, Россия.
---В результат вывести одно значение суммы.
+-- 5. Calculate the total amount of received payments from customers located
+-- in Zhukovsky, Russia.
+-- Return a single value representing the total payment amount.
 
 SELECT sum(pp.amount)
 FROM stroy.project_payment pp
@@ -77,10 +80,10 @@ WHERE pp.fact_transaction_timestamp IS NOT NULL
   AND ci.city_name = 'Жуковский'
   AND co.country_name = 'Россия';
 
---6. Пусть руководитель проекта получает премию в 1% от стоимости завершенных проектов.
---Если взять завершенные проекты, какой руководитель проекта получит самый большой бонус?
---В результат нужно вывести идентификатор руководителя проекта, его ФИО и размер бонуса.
---Если таких руководителей несколько, предусмотреть вывод всех.
+-- 6. Project managers receive a bonus equal to 1% of the cost of completed projects.
+-- Find the project manager who would receive the highest bonus.
+-- Return the manager's ID, full name, and bonus amount.
+-- If multiple managers have the same highest bonus, return all of them.
 
 SELECT
     e.employee_id,
@@ -103,8 +106,8 @@ JOIN stroy.person p
     ON p.person_id = e.person_id
 WHERE rnk = 1;
 
---7. Получите накопительный итог планируемых авансовых платежей на каждый месяц в отдельности.
---Выведите в результат те даты планируемых платежей, которые идут после преодаления накопительной суммой значения в 30 000 000
+-- 7. Calculate the cumulative total of planned advance payments for each month separately.
+-- Return the payment dates where the cumulative amount exceeds 30,000,000.
 
 WITH payments AS (
     SELECT
@@ -135,15 +138,9 @@ WHERE cumulative_amount > 30000000
   AND coalesce(prev_amount,0) <= 30000000
 ORDER BY plan_payment_date;
 
---8. Используя рекурсию посчитайте сумму фактических окладов сотрудников из структурного подразделения с id равным 17 и всех дочерних подразделений.
---В результат вывести одно значение суммы.
-
-
--- Что в нашей базе считается фактическим окладом сотрудника?
--- employee_salary_history пустая
--- Учитывается ли ставка при расчёте оклада?
--- sum(salary)= 4 050 000 что преподаватель назвал не верным
--- sum(salary * rate) = 3 540 000
+-- 8. Using recursion, calculate the total actual salaries of employees
+-- from the organizational unit with ID = 17 and all its child units.
+-- Return a single value representing the total salary amount.
 
 WITH RECURSIVE units AS (
     SELECT unit_id
@@ -165,17 +162,15 @@ JOIN units u
     ON u.unit_id = p.unit_id;
 
 
---9. Задание выполняется одним запросом.
---Сделайте сквозную нумерацию фактических платежей по проектам на каждый год в отдельности в порядке даты платежей.
---Получите платежи, сквозной номер которых кратен 5.
---Выведите скользящее среднее размеров платежей с шагом 2 строки назад и 2 строки вперед от текущей.
---Получите сумму скользящих средних значений.
---Получите сумму стоимости проектов на каждый год.
---Выведите в результат значение года (годов) и сумму проектов, где сумма проектов меньше, чем сумма скользящих средних значений.
-
--- В результате у меня получились пустые строки, т.к. есть условие ps.sum_project_cost < ms.sum_moving_avg 
--- (сумма проектов меньше, чем сумма скользящих средних значений)
--- надеюсь решил правильно.
+-- 9. Complete the task using a single query.
+-- Create sequential numbering of actual project payments separately for each year
+-- ordered by payment date.
+-- Select payments where the sequential number is divisible by 5.
+-- Calculate the moving average of payment amounts using a window of
+-- 2 rows before and 2 rows after the current row.
+-- Calculate the sum of moving averages.
+-- Calculate the total project cost for each year.
+-- Return years where the total project cost is lower than the sum of moving averages.
 
 WITH numbered AS (
     SELECT
@@ -223,14 +218,14 @@ JOIN moving_sum ms
     ON ms.year_payment = ps.year_project
 WHERE ps.sum_project_cost < ms.sum_moving_avg;
 
---10. Создайте материализованное представление, которое будет хранить отчет следующей структуры:
---идентификатор проекта
---название проекта
---дата последней фактической оплаты по проекту
---размер последней фактической оплаты
---ФИО руководителей проектов
---Названия контрагентов
---В виде строки названия типов работ по каждому контрагенту
+-- 10. Create a materialized view storing a report with the following structure:
+-- - Project ID
+-- - Project name
+-- - Date of the latest actual payment for the project
+-- - Amount of the latest actual payment
+-- - Full name of project managers
+-- - Customer names
+-- - Work type names for each customer as a single string
 
 CREATE MATERIALIZED VIEW stroy.mv_project_payment_report AS
 WITH last_payment AS (
